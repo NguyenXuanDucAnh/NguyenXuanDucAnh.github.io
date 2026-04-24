@@ -104,28 +104,36 @@
             }
 
             const file = fileInput.files[0];
+            status.innerText = "Đang đọc file...";
 
-            const formData = new FormData();
-            formData.append("file", file);
+            // Đọc file thành base64
+            const base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(",")[1]); // bỏ "data:...;base64,"
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
 
             try {
                 status.innerText = "Đang upload...";
 
-                const response = await fetch("http://localhost:5000/api/upload", {
+                const response = await fetch("http://localhost:8080/api/upload", {
                     method: "POST",
-                    body: formData
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        filename: file.name,
+                        mime_type: file.type,
+                        data: base64
+                    })
                 });
 
                 const result = await response.json();
-
                 if (response.ok) {
-                    status.innerText = "Upload thành công!";
-                    console.log(result);
+                    status.innerText = `Upload thành công! (${result.filename}, ${result.size} bytes)`;
                 } else {
-                    status.innerText = "Upload thất bại!";
+                    status.innerText = "Upload thất bại: " + result.message;
                 }
             } catch (error) {
-                console.error(error);
                 status.innerText = "Lỗi kết nối server!";
             }
         }
